@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Effects</title>
+    <!--cerchiamo un font assurdamente bello-->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #spiegazione {
+            margin: 20px;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #f0f0f0;
+        }
+        
+    </style>
+</head>
+
+<body>
+    <div id="spiegazione">
+        <h1>Effects</h1>
+        <p>Questa pagina mostra come è possibile creare effetti audio dinamici utilizzando l'API Web Audio e l'API
+            Canvas. Gli effetti audio sono controllati da un'interfaccia grafica utente (GUI) che consente all'utente di
+            abilitare/disabilitare gli effetti e di regolare i parametri degli effetti. Gli effetti audio sono
+            rappresentati graficamente utilizzando l'API Canvas. Gli effetti audio disponibili sono:</p>
+        <ul>
+            <li>Effetto Tunnel: un effetto visivo che simula un tunnel in cui la velocità e il raggio del tunnel
+                dipendono dalle frequenze audio dei bassi e medi.</li>
+            <li>Effetto Star Rain: un effetto visivo che simula una pioggia di stelle in cui la velocità e il numero di
+                stelle dipendono dalle frequenze audio dei bassi e alti.</li>
+        </ul>
+        <p>L'interfaccia grafica utente (GUI) consente all'utente di:</p>
+        <ul>
+            <li>Abilitare/disabilitare gli effetti audio.</li>
+            <li>Regolare i parametri degli effetti audio.</li>
+            <li>Avviare/fermare l'audio.</li>
+        </ul>
+        <p>La pagina utilizza l'API Web Audio per acquisire l'audio dal microfono e l'API Canvas per visualizzare gli
+            effetti audio. L'interfaccia grafica utente (GUI) è creata utilizzando JavaScript e l'API Canvas.</p>
+        <h1>Code</h1>
+
+    </div>
+    <canvas id="canvas"></canvas>
+    <script>
+        //crea una costante che prende l'audio dal mic
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let deltaTime = 0;
+        class GUIFramework {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                //TUTTO SCHERMO
+                this.canvas.width = window.innerWidth - 20;
+                this.canvas.height = window.innerHeight / 2;
+                this.elements = [];
+                this.canvas.addEventListener('click', this.handleClick.bind(this));
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                //ordina gli elementi in base al tipo , se il tipo è controller disegnalo sotto  a tutto
+                this.elements.sort((a, b) => {
+                    if (a.type === 'controller' && b.type !== 'controller') {
+                        return 0;
+                    } else if (a.type !== 'controller' && b.type === 'controller') {
+                        return 1;
+                    } else {
+                        return 1;
+                    }
+                });
+
+                // Disegna gli effetti abilitati
+                Object.values(mapControllerFX).forEach(controller => {
+                    if (controller.enabled && controller.effect.draw) {
+                        controller.effect.update();
+                        controller.effect.draw();
+                    }
+                });
+
+                // Disegna gli elementi controllatori
+                this.elements.forEach((element) => {
+                    if (element.draw && element.type === 'controller') {
+                        element.update();
+                        element.draw(this.ctx);
+                    }
+                });
+                this.ctx.strokeStyle = 'black';
+                this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            update(deltaTime) {
+                this.elements.forEach((element) => {
+                    if (element.update) {
+                        element.update();
+                    }
+                });
+            }
+
+            handleClick(event) {
+                const clickX = event.clientX - this.canvas.offsetLeft;
+                const clickY = event.clientY - this.canvas.offsetTop;
+                this.elements.forEach((element) => {
+                    if (element.isClicked && element.isClicked(clickX, clickY)) {
+                        if (audioCtx.state === 'suspended') {
+                            audioCtx.resume();
+                        }
+                        element.onClick();
+                    }
+                });
+            }
+        }
+
+        class Button {
+            constructor(x, y, width, height, text, onClick) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.text = text;
+                this.onClick = onClick;
+                this.type = 'controller'
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = '#555';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px Arial';
+                ctx.fillText(this.text, this.x + 10, this.y + 25);
+            }
+
+            isClicked(clickX, clickY) {
+                return clickX >= this.x && clickX <= this.x + this.width &&
+                    clickY >= this.y && clickY <= this.y + this.height;
+            }
+
+            update() {
+                //console.log('update');
+            }
+        }
+
+        class TextBox {
+            constructor(x, y, width, height, value) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.value = '';
+                this.type = 'controller'
+            }
+
+            draw(ctx) {
+                //sfondo bianco
+                ctx.fillStyle = 'white';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                ctx.fillStyle = 'black';
+                ctx.font = this.height + 'px Arial';
+                ctx.fillText(this.value, this.x + 10, this.y + 25);
+                ctx.strokeStyle = 'black';
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+            }
+            update() {
+                //console.log('update');
+            }
+        }
+
+        class Checkbox extends TextBox {
+            constructor(x, y, width, height, text, checked) {
+                super(x, y, width, height);
+                this.text = text;
+                this.checked = checked;
+            }
+
+            draw(ctx) {
+                super.draw(ctx);
+                if (this.checked) {
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('☑', this.x + 5, this.y + 25);
+                } else {
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('☐', this.x + 5, this.y + 25);
+                }
+                ctx.fillStyle = 'black';
+                ctx.fillText(this.text, this.x + 30, this.y + 25);
+            }
+
+            onClick() {
+                this.checked = !this.checked;
+            }
+
+            isClicked(clickX, clickY) {
+                return clickX >= this.x && clickX <= this.x + this.width &&
+                    clickY >= this.y && clickY <= this.y + this.height;
+            }
+
+            update() {
+                //console.log('update');
+            }
+        }
+
+        class Effect {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.enabled = false;
+                //bass mid treble
+                this.bass = 0;
+                this.mid = 0;
+                this.treble = 0;
+
+            }
+            draw() {
+                throw new Error('draw method must be implemented');
+            }
+            update() {
+                throw new Error('update method must be implemented');
+            }
+        }
+
+        class TunnelEffect extends Effect {
+            constructor(canvasId, numParticles, speed, radius) {
+                super(canvasId);
+                this.numParticles = numParticles;
+                this.speed = speed;
+                this.radius = radius;
+                this.time = 0;
+                this.bass = 0;
+                this.mid = 0;
+                this.treble = 0;
+            }
+
+            update(deltaTime) {
+                this.time += this.speed * deltaTime;
+            }
+
+            draw() {
+                //fai qualcosa di divertente e dinamico conle frequenze
+                this.ctx.save();
+                //disegna un cerchio al centro del canvas bello grande
+                this.ctx.beginPath();
+                this.ctx.arc(this.canvas.width / 2, this.canvas.height / 2, this.radius * 200, 0, Math.PI * 2);
+                //stroke line parametrico 
+                //fai un colore che dipende dalla frequenza ,non facciamolo tutto nero
+                const r = 255 * this.bass / 100;
+                const g = 255 * this.mid / 100;
+                const b = 255 * this.treble / 100;
+                this.ctx.strokeStyle = `rgb(${r},${g},${b})`;
+                this.ctx.lineWidth = 5 * this.bass / 2;
+                this.ctx.stroke();
+                this.ctx.fillStyle = 'rgba(255, 100, 0, 0.5)';
+
+                this.ctx.restore();
+            }
+
+            onmousemove(event) {
+                // this.radius = event.clientX;
+            }
+        }
+
+        class StarRainEffect extends Effect {
+            constructor(canvas, numStars, speed) {
+                super(canvas);
+                this.numStars = numStars;
+                this.speed = speed;
+                this.stars = [];
+                this.time = 0;
+                this.bass = 0;
+                this.mid = 0;
+                this.treble = 0;
+
+
+                for (let i = 0; i < this.numStars; i++) {
+                    this.stars.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        speed: Math.random() * this.speed + 1,
+                        size: Math.random() * 2 + 1
+                    });
+                }
+            }
+
+            draw() {
+                // Draw stars
+                this.ctx.save();
+                this.stars.forEach(star => {
+                    //creaun effetto di stelle che pulsano
+                    this.ctx.fillStyle = 'rgba(123, 12, 255, 0.5)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                this.ctx.restore();
+            }
+
+            update(deltaTime) {
+
+                this.time += deltaTime;
+                this.stars.forEach(star => {
+                    //fai una cosa a tempo
+                    star.y += star.speed;
+                    if (star.y > this.canvas.height) {
+                        star.y = 0;
+                    }
+                });
+            }
+        }
+
+        class Slider {
+            constructor(x, y, width, height, min, max, initialValue, onChange) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.min = min;
+                this.max = max;
+                this.value = initialValue;
+                this.onChange = onChange;
+                this.dragging = false;
+
+                // Calculate position of handle based on initial value
+                this.handleX = this.x + (this.value - this.min) / (this.max - this.min) * this.width;
+
+                // Add event listeners for mouse interaction
+                document.addEventListener('mousedown', this.handleMouseDown.bind(this));
+                document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                document.addEventListener('mouseup', this.handleMouseUp.bind(this));
+            }
+
+            draw(ctx) {
+                // Draw slider track
+                ctx.fillStyle = '#888';
+                ctx.fillRect(this.x, this.y + this.height / 2 - 2, this.width, 4);
+
+                // Draw handle
+                ctx.fillStyle = '#444';
+                ctx.fillRect(this.handleX - 5, this.y, 10, this.height);
+            }
+
+            handleMouseDown(event) {
+                if (
+                    event.clientX >= this.handleX - 5 &&
+                    event.clientX <= this.handleX + 5 &&
+                    event.clientY >= this.y &&
+                    event.clientY <= this.y + this.height
+                ) {
+                    this.dragging = true;
+                }
+            }
+
+            handleMouseMove(event) {
+                if (this.dragging) {
+                    this.handleX = Math.max(this.x, Math.min(this.x + this.width, event.clientX));
+                    this.value = this.min + (this.handleX - this.x) / this.width * (this.max - this.min);
+                    this.onChange(this.value);
+                }
+            }
+
+            handleMouseUp() {
+                this.dragging = false;
+            }
+        }
+
+        class DropdownMenu {
+            constructor(x, y, width, options, onSelect) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.options = options;
+                this.selectedOption = options[0];
+                this.isOpen = false;
+                this.onSelect = onSelect;
+
+                // Add event listener for click to toggle menu
+                document.addEventListener('click', this.handleClick.bind(this));
+            }
+
+            draw(ctx) {
+                // Draw dropdown box
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(this.x, this.y, this.width, 30);
+                ctx.strokeStyle = '#000';
+                ctx.strokeRect(this.x, this.y, this.width, 30);
+
+                // Draw selected option
+                ctx.fillStyle = '#000';
+                ctx.fillText(this.selectedOption, this.x + 5, this.y + 20);
+
+                // Draw arrow indicating dropdown
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width - 15, this.y + 10);
+                ctx.lineTo(this.x + this.width - 10, this.y + 20);
+                ctx.lineTo(this.x + this.width - 5, this.y + 10);
+                ctx.stroke();
+
+                // Draw options if menu is open
+                if (this.isOpen) {
+                    ctx.fillStyle = '#fff';
+                    for (let i = 0; i < this.options.length; i++) {
+                        ctx.fillRect(this.x, this.y + 30 + i * 30, this.width, 30);
+                        ctx.fillStyle = '#000';
+                        ctx.fillText(this.options[i], this.x + 5, this.y + 50 + i * 30);
+                    }
+                }
+            }
+
+            handleClick(event) {
+                if (
+                    event.clientX >= this.x &&
+                    event.clientX <= this.x + this.width &&
+                    event.clientY >= this.y &&
+                    event.clientY <= this.y + 30
+                ) {
+                    this.isOpen = !this.isOpen;
+                } else if (this.isOpen) {
+                    for (let i = 0; i < this.options.length; i++) {
+                        if (
+                            event.clientX >= this.x &&
+                            event.clientX <= this.x + this.width &&
+                            event.clientY >= this.y + 30 + i * 30 &&
+                            event.clientY <= this.y + 60 + i * 30
+                        ) {
+                            this.selectedOption = this.options[i];
+                            this.onSelect(this.selectedOption);
+                            this.isOpen = false;
+                            break;
+                        }
+                    }
+                } else {
+                    this.isOpen = false;
+                }
+            }
+        }
+
+        const gui = new GUIFramework('canvas');
+
+        const checkbox = new Checkbox(20, 10, 110, 30, ' FX 1', false);
+        const tunnelEffect = new TunnelEffect('canvas', 1000, 1, 0.5);
+
+        const starRainEffect = new StarRainEffect('canvas', 1000, 0.01);
+        const starRainCheckbox = new Checkbox(20, 50, 110, 30, ' FX 2', false);
+
+        const dropdownMenu = new DropdownMenu(20, 130, 110, ['Option 1', 'Option 2', 'Option 3'], (option) => {
+            console.log('Selected option:', option);
+        });
+
+        gui.elements.push(dropdownMenu);
+
+
+
+        const mapControllerFX = {
+            'FX 1': {
+                effect: tunnelEffect,
+                checkbox: checkbox,
+                enabled: false,
+                params: {}
+            },
+            'FX 2': {
+                effect: starRainEffect,
+                checkbox: starRainCheckbox,
+                enabled: false,
+                params: {}
+            }
+        };
+
+        starRainCheckbox.onClick = () => {
+            mapControllerFX['FX 2'].enabled = !mapControllerFX['FX 2'].enabled;
+            if (mapControllerFX['FX 2'].enabled) {
+                starRainEffect.enabled = true;
+                starRainCheckbox.checked = true;
+            } else {
+                starRainEffect.enabled = false;
+                starRainCheckbox.checked = false;
+            }
+        };
+
+        //come associo l'effetto al checkbox?
+        checkbox.onClick = () => {
+            mapControllerFX['FX 1'].enabled = !mapControllerFX['FX 1'].enabled;
+            if (mapControllerFX['FX 1'].enabled) {
+                tunnelEffect.enabled = true;
+                checkbox.checked = true;
+            } else {
+                tunnelEffect.enabled = false;
+                checkbox.checked = false;
+            }
+        };
+
+        checkbox.enabled = true;
+        starRainCheckbox.enabled = true;
+
+        gui.elements.push(checkbox);
+        gui.elements.push(starRainCheckbox);
+
+        gui.elements.push(starRainEffect);
+        gui.elements.push(tunnelEffect);
+
+
+        const analyser = audioCtx.createAnalyser();
+        const stream = navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        stream.then((stream) => {
+            const source = audioCtx.createMediaStreamSource(stream);
+            source.connect(analyser);
+            //analyser.connect(audioCtx.destination);
+        });
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        let lastTime = performance.now();
+
+        animate();
+
+        // Aggiornamento della funzione getMyOutputAnalyser per calcolare separatamente i valori di bassi, medi e alti.
+        function getMyOutputAnalyser() {
+            const bass = calculateFrequency(dataArray, 20, 250);
+            const mid = calculateFrequency(dataArray, 250, 2000);
+            const treble = calculateFrequency(dataArray, 2000, 20000);
+
+            return { bass, mid, treble };
+        }
+
+        // Funzione ausiliaria per calcolare la frequenza in una specifica banda.
+        function calculateFrequency(dataArray, startFreq, endFreq) {
+            const startIdx = Math.floor(startFreq / (audioCtx.sampleRate / bufferLength));
+            const endIdx = Math.floor(endFreq / (audioCtx.sampleRate / bufferLength));
+            const slice = dataArray.slice(startIdx, endIdx);
+            return slice.reduce((acc, val) => acc + val, 0) / slice.length;
+        }
+        // Aggiornamento della funzione animate per aggiornare gli effetti audio durante ogni iterazione.
+        let loopAnmationValue = 0;
+        function animate() {
+
+            gui.update(deltaTime);
+            gui.draw();
+            myOutputAnalyser = getMyOutputAnalyser();
+            tunnelEffect.speed = myOutputAnalyser.bass / 100;
+            tunnelEffect.radius = myOutputAnalyser.mid / 100;
+            starRainEffect.speed = myOutputAnalyser.bass / 100;
+            starRainEffect.numStars = myOutputAnalyser.treble * 10;
+            analyser.getByteFrequencyData(dataArray);
+            //disegna lo spettro
+            let barWidth = (canvas.width / bufferLength) * 10;
+            let barHeight;
+            let x = 0;
+            let ctx = canvas.getContext('2d');
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = dataArray[i];
+                //il coloe dipende dalla frequenza
+                ctx.fillStyle = 'rgb(' + (barHeight + 100) + ',50,50)';
+
+
+                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight / 2);
+                x += barWidth + 1;
+            }
+            deltaTime = performance.now() - lastTime;
+            lastTime = performance.now();
+            //scrivi il tempo in basso a destra del canvas e limita la lunghezza a 5 caratteri
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText('Time: ' + deltaTime.toFixed(2), canvas.width - 100, canvas.height - 10);
+            //crea una animazione da paura in base alle frequenze
+
+            if (tunnelEffect.enabled) {
+                //fai qualcosa di divertente e dinamico conle frequenze
+                tunnelEffect.bass = myOutputAnalyser.bass;
+                tunnelEffect.mid = myOutputAnalyser.mid;
+                tunnelEffect.treble = myOutputAnalyser.treble;
+
+
+                tunnelEffect.update(deltaTime);
+                tunnelEffect.draw();
+
+            }
+            if (starRainEffect.enabled) {
+                starRainEffect.bass = myOutputAnalyser.bass;
+                starRainEffect.mid = myOutputAnalyser.mid;
+                starRainEffect.treble = myOutputAnalyser.treble;
+
+                starRainEffect.update(deltaTime);
+                starRainEffect.draw();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // Aggiunta di controlli sull'audio in base all'interazione dell'utente.
+        // Esempio: aggiunta di un pulsante per avviare/fermare l'audio.
+        const audioControlButton = new Button(20, 90, 110, 30, 'Toggle Audio', toggleAudio);
+
+        function toggleAudio() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    console.log('Audio resumed.');
+                    audioControlButton.text = 'Suspend Audio';
+                }).catch(err => {
+                    console.error('Error resuming audio:', err);
+
+                });
+            } else {
+                audioCtx.suspend().then(() => {
+                    console.log('Audio suspended.');
+                    audioControlButton.text = 'Resume Audio';
+
+                }).catch(err => {
+                    console.error('Error suspending audio:', err);
+                });
+            }
+        }
+
+
+        gui.elements.push(audioControlButton);
+
+        // Aggiunta dell'analizzatore di frequenza ai controlli GUI.
+        gui.elements.push(analyser);
+
+
+
+
+    </script>
+</body>
+
+</html>

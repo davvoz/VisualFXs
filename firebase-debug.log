@@ -66,3 +66,36 @@ Before we get started, keep in mind:
 [info] 
 [info] +  Success! Logged into GitHub as davvoz 
 [info] 
+[debug] [2024-02-27T17:14:53.763Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:14:53.946Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key 401
+[debug] [2024-02-27T17:14:53.947Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:14:59.642Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:14:59.838Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key 401
+[debug] [2024-02-27T17:14:59.838Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:15:13.146Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:15:13.344Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key 401
+[debug] [2024-02-27T17:15:13.344Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:15:42.002Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:15:42.181Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key 401
+[debug] [2024-02-27T17:15:42.182Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFXs/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:15:48.323Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:15:48.496Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/actions/secrets/public-key 401
+[debug] [2024-02-27T17:15:48.496Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:16:16.788Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:16:16.961Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key 401
+[debug] [2024-02-27T17:16:16.961Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:16:17.796Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:16:17.931Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key 401
+[debug] [2024-02-27T17:16:17.931Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:16:20.340Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:16:20.465Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key 401
+[debug] [2024-02-27T17:16:20.465Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:16:21.292Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:16:21.421Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key 401
+[debug] [2024-02-27T17:16:21.421Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:16:21.532Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:16:21.667Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key 401
+[debug] [2024-02-27T17:16:21.667Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+[debug] [2024-02-27T17:16:21.764Z] >>> [apiv2][query] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key type=owner
+[debug] [2024-02-27T17:16:21.913Z] <<< [apiv2][status] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key 401
+[debug] [2024-02-27T17:16:21.913Z] <<< [apiv2][body] GET https://api.github.com/repos/davvoz/VisualFX/actions/secrets/public-key {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}

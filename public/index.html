@@ -1,89 +1,633 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+<html lang="en">
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/10.8.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/10.8.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/10.8.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/10.8.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/10.8.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/10.8.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/10.8.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/10.8.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/10.8.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/10.8.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
-
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
-    </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
-
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Effects</title>
+    <!--cerchiamo un font assurdamente bello-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
-      });
+
+
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="canvas"></canvas>
+    <script>
+        //crea una costante che prende l'audio dal mic
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();//C:\Progetti\vanilla\VisualFXs\index.html
+        let deltaTime = 0;
+        class GUIFramework {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                //TUTTO SCHERMO
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.elements = [];
+                this.canvas.addEventListener('click', this.handleClick.bind(this));
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                //sfondo grigio figo
+                this.ctx.fillStyle = 'black';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                //ordina gli elementi in base al tipo , se il tipo è controller disegnalo sotto  a tutto
+                this.elements.sort((a, b) => {
+                    if (a.type === 'controller') {
+                        return 1;
+                    }
+                    return -1;
+                });
+                // Disegna gli elementi controllatori
+                this.elements.forEach((element) => {
+                    if (element.draw && element.type === 'controller') {
+                        element.update();
+                        element.draw(this.ctx);
+                    }
+                });
+                // Disegna gli effetti abilitati
+                Object.values(mapControllerFX).forEach(controller => {
+                    if (controller.enabled && controller.effect.draw) {
+                        controller.effect.update();
+                        controller.effect.draw();
+                    }
+                });
+
+
+            }
+
+            update(deltaTime) {
+                this.elements.forEach((element) => {
+                    if (element.update) {
+                        element.update();
+                    }
+                });
+            }
+
+            handleClick(event) {
+                const clickX = event.clientX - this.canvas.offsetLeft;
+                const clickY = event.clientY - this.canvas.offsetTop;
+                this.elements.forEach((element) => {
+                    if (element.isClicked && element.isClicked(clickX, clickY)) {
+                        if (audioCtx.state === 'suspended') {
+                            audioCtx.resume();
+                        }
+                        element.onClick();
+                    }
+                });
+            }
+        }
+
+        class Button {
+            constructor(x, y, width, height, text, onClick) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.text = text;
+                this.onClick = onClick;
+                this.type = 'controller'
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = '#555';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px Arial';
+                ctx.fillText(this.text, this.x + 10, this.y + 25);
+            }
+
+            isClicked(clickX, clickY) {
+                return clickX >= this.x && clickX <= this.x + this.width &&
+                    clickY >= this.y && clickY <= this.y + this.height;
+            }
+
+            update() {
+                //console.log('update');
+            }
+        }
+
+        class TextBox {
+            constructor(x, y, width, height, value) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.value = '';
+                this.type = 'controller'
+            }
+
+            draw(ctx) {
+                //sfondo bianco
+                ctx.fillStyle = 'white';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                ctx.fillStyle = 'black';
+                ctx.font = this.height + 'px Arial';
+                ctx.fillText(this.value, this.x + 10, this.y + 25);
+                ctx.strokeStyle = 'black';
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+            }
+            update() {
+                //console.log('update');
+            }
+        }
+
+        class Checkbox extends TextBox {
+            constructor(x, y, width, height, text, checked) {
+                super(x, y, width, height);
+                this.text = text;
+                this.checked = checked;
+            }
+
+            draw(ctx) {
+                super.draw(ctx);
+                if (this.checked) {
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('☑', this.x + 5, this.y + 25);
+                } else {
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('☐', this.x + 5, this.y + 25);
+                }
+                ctx.fillStyle = 'black';
+                ctx.fillText(this.text, this.x + 30, this.y + 25);
+            }
+
+            onClick() {
+                this.checked = !this.checked;
+            }
+
+            isClicked(clickX, clickY) {
+                return clickX >= this.x && clickX <= this.x + this.width &&
+                    clickY >= this.y && clickY <= this.y + this.height;
+            }
+
+            update() {
+                //console.log('update');
+            }
+        }
+
+        class Effect {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.enabled = false;
+                //bass mid treble
+                this.bass = 0;
+                this.mid = 0;
+                this.treble = 0;
+
+            }
+            draw() {
+                throw new Error('draw method must be implemented');
+            }
+            update() {
+                throw new Error('update method must be implemented');
+            }
+        }
+
+        class TunnelEffect extends Effect {
+            constructor(canvasId, numParticles, speed, radius) {
+                super(canvasId);
+                this.numParticles = numParticles;
+                this.speed = speed;
+                this.radius = radius;
+                this.time = 0;
+                this.bass = 0;
+                this.mid = 0;
+                this.treble = 0;
+            }
+
+            update(deltaTime) {
+                this.time += this.speed * deltaTime;
+            }
+
+            draw() {
+                //fai qualcosa di divertente e dinamico conle frequenze
+                this.ctx.save();
+                //disegna un cerchio al centro del canvas bello grande
+                this.ctx.beginPath();
+                this.ctx.arc(this.canvas.width / 2, this.canvas.height / 2, this.radius * 200, 0, Math.PI * 2);
+                //stroke line parametrico 
+                //fai un colore che dipende dalla frequenza ,non facciamolo tutto nero
+                const r = 255 * this.bass / 100;
+                const g = 255 * this.mid / 100;
+                const b = 255 * this.treble / 100;
+                this.ctx.strokeStyle = `rgb(${r},${g},${b})`;
+                this.ctx.lineWidth = 5 * this.bass / 2;
+                this.ctx.stroke();
+                this.ctx.restore();
+                this.ctx.save();
+                this.ctx.beginPath();
+                //disegna una spirale
+                this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+                for (let i = 0; i < this.numParticles; i++) {
+                    const angle = i * this.numParticles * 2 / this.numParticles;
+                    const x = Math.cos(angle) * (this.radius * i);
+                    const y = Math.sin(angle) * (this.radius * i);
+                    this.ctx.lineTo(x + this.bass, y-this.canvas.height / this.bass);
+                }
+                this.ctx.strokeStyle = `rgb(${b},${r},${g})`;
+                this.ctx.lineWidth = 5 * this.bass / 2;
+                this.ctx.stroke();
+                this.ctx.restore();
+
+            }
+
+            onmousemove(event) {
+                // this.radius = event.clientX;
+            }
+        }
+
+        class StarRainEffect extends Effect {
+            constructor(canvas, numStars, speed) {
+                super(canvas);
+
+                //particelle a velocità diverse
+                this.numStars = numStars;
+                this.speed = speed;
+                this.stars = [];
+                this.time = 0;
+                this.bass = 0;
+                this.mid = 0;
+                this.treble = 0;
+
+
+                for (let i = 0; i < this.numStars; i++) {
+                    this.stars.push({
+
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        speed: Math.random() * 2 + 1,
+                        size: Math.random() * 9 + 1
+                    });
+                }
+            }
+
+            draw() {
+                // Draw stars
+                this.ctx.save();
+                this.stars.forEach(star => {
+                    //fillStyle parametrico
+                    this.ctx.fillStyle = `rgba(${this.bass},${this.mid},${this.treble},0.5)`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                this.ctx.restore();
+            }
+
+            update(deltaTime) {
+
+                this.time += deltaTime;
+                this.stars.forEach(star => {
+                    //fai una cosa a tempo
+                    star.y += star.speed;
+                    if (star.y > this.canvas.height) {
+                        star.y = 0;
+                    }
+
+                });
+            }
+        }
+
+        class MadDancingShapesEffect extends Effect {
+            constructor(canvasId, numSpirals) {
+                super(canvasId);
+                this.numSpirals = numSpirals;
+                this.spirals = [];
+                this.time = 0;
+                this.bass = 0;
+                this.mid = 0;
+                this.treble = 0;
+                this.initSpirals();
+            }
+
+            initSpirals() {
+                //POSIZIONA  LE SPIRALI IN PUNTI DIVERSI DEL CANVAS
+                for (let i = 0; i < this.numSpirals; i++) {
+                    this.spirals.push({
+                        angle: 0,
+                        angleOffset: Math.random() * Math.PI * 2,
+                        radius: Math.random() * 100 + 50,
+                        speed: Math.random() * 0.01 + 0.01
+                    });
+                }
+            }
+
+            draw() {
+                this.ctx.save();
+                this.spirals.forEach(spiral => {
+                    this.ctx.beginPath();
+                    //LE SPIRALI HANNO ORIGINI DIVERSE
+                    this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+                    this.ctx.rotate(spiral.angle + this.mid);
+                    this.ctx.moveTo(spiral.radius, this.treble);
+                    this.ctx.lineTo(spiral.radius + this.treble, this.bass);
+                    const r = 255 * this.bass / 100;
+                    const g = 255 * this.mid / 100;
+                    const b = 255 * this.treble / 100;
+                    this.ctx.strokeStyle = `rgb(${g},${b},${r})`;
+
+                    this.ctx.lineWidth = this.mid;
+
+                    this.ctx.stroke();
+                });
+                this.ctx.restore();
+            }
+
+            update(deltaTime) {
+                this.time += deltaTime;
+                this.spirals.forEach(spiral => {
+                    spiral.angle += spiral.speed / 1000;
+                });
+            }
+        }
+
+        class ScrollingTextEffect extends Effect {
+            constructor(canvasId, text, fontSize) {
+                super(canvasId);
+                this.text = text;
+                this.fontSize = fontSize;
+                this.x = this.canvas.width;
+                this.y = this.canvas.height / 2; // Centrato verticalmente
+                this.speed = 2;
+            }
+
+            draw() {
+                //il colore del testo dipende dalla frequenza
+                this.ctx.save();
+                const r = 255 * this.bass / 100;
+                const g = 255 * this.mid / 100;
+                const b = 255 * this.treble / 100;
+                this.ctx.fillStyle = `rgb(${b},${g},${r})`;
+                //this.ctx.font = `${70 + this.fontSize + this.bass / 32}px Arial`;
+                //usa il font figo
+                this.ctx.font = `${70 + this.fontSize + this.bass / 32}px 'Kode Mono', monospace`;
+                //che font abbiamo ?    
+                this.ctx.fillText(this.text, this.x, this.y);
+
+                this.ctx.restore();
+            }
+
+            update(deltaTime) {
+                this.x -= this.speed;
+                if (this.x < -this.ctx.measureText(this.text).width) {
+                    this.x = this.canvas.width;
+                }
+            }
+        }
+
+
+        const gui = new GUIFramework('canvas');
+        const buttonsWidth = 130;
+        const buttonsHeight = 30;
+        const tunnelEffect = new TunnelEffect('canvas', 100, 10, 0.5);
+        const checkbox = new Checkbox(20, 10, buttonsWidth, buttonsHeight, ' FX 1', false);
+
+        const starRainEffect = new StarRainEffect('canvas', 100, 0.01);
+        const starRainCheckbox = new Checkbox(20, 50, buttonsWidth, buttonsHeight, ' FX 2', false);
+
+        const madDancingShapesEffect = new MadDancingShapesEffect('canvas', 100);
+        const madDancingShapesCheckbox = new Checkbox(20, 90, buttonsWidth, buttonsHeight, ' FX 3', false);
+        //descrivi il programma in modo molto simpatico
+        const spiegazione = 'Reality glitches dream electric';
+        const scrollingTextEffect = new ScrollingTextEffect('canvas', spiegazione, 32);
+        const scrollingTextCheckbox = new Checkbox(20, 130, buttonsWidth, buttonsHeight, ' FX 4', false);
+
+        const mapControllerFX = {
+            'FX 4': {
+                effect: scrollingTextEffect,
+                checkbox: scrollingTextCheckbox,
+                enabled: false,
+                params: {}
+            },
+            'FX 1': {
+                effect: tunnelEffect,
+                checkbox: checkbox,
+                enabled: false,
+                params: {}
+            },
+            'FX 2': {
+                effect: starRainEffect,
+                checkbox: starRainCheckbox,
+                enabled: false,
+                params: {}
+            },
+            'FX 3': {
+                effect: madDancingShapesEffect,
+                checkbox: madDancingShapesCheckbox,
+                enabled: false,
+                params: {}
+            }
+
+        };
+
+        starRainCheckbox.onClick = () => {
+            mapControllerFX['FX 2'].enabled = !mapControllerFX['FX 2'].enabled;
+            if (mapControllerFX['FX 2'].enabled) {
+                starRainEffect.enabled = true;
+                starRainCheckbox.checked = true;
+            } else {
+                starRainEffect.enabled = false;
+                starRainCheckbox.checked = false;
+            }
+        };
+
+        //come associo l'effetto al checkbox?
+        checkbox.onClick = () => {
+            mapControllerFX['FX 1'].enabled = !mapControllerFX['FX 1'].enabled;
+            if (mapControllerFX['FX 1'].enabled) {
+                tunnelEffect.enabled = true;
+                checkbox.checked = true;
+            } else {
+                tunnelEffect.enabled = false;
+                checkbox.checked = false;
+            }
+        };
+
+        madDancingShapesCheckbox.onClick = () => {
+            mapControllerFX['FX 3'].enabled = !mapControllerFX['FX 3'].enabled;
+            if (mapControllerFX['FX 3'].enabled) {
+                madDancingShapesEffect.enabled = true;
+                madDancingShapesCheckbox.checked = true;
+            } else {
+                madDancingShapesEffect.enabled = false;
+                madDancingShapesCheckbox.checked = false;
+            }
+        };
+
+        scrollingTextCheckbox.onClick = () => {
+            mapControllerFX['FX 4'].enabled = !mapControllerFX['FX 4'].enabled;
+            if (mapControllerFX['FX 4'].enabled) {
+                scrollingTextEffect.enabled = true;
+                scrollingTextCheckbox.checked = true;
+            } else {
+                scrollingTextEffect.enabled = false;
+                scrollingTextCheckbox.checked = false;
+            }
+        };
+
+        checkbox.enabled = true;
+        starRainCheckbox.enabled = true;
+        madDancingShapesCheckbox.enabled = true;
+        gui.elements.push(scrollingTextEffect);
+        gui.elements.push(scrollingTextCheckbox);
+        gui.elements.push(checkbox);
+        gui.elements.push(starRainCheckbox);
+
+        gui.elements.push(starRainEffect);
+        gui.elements.push(tunnelEffect);
+
+        gui.elements.push(madDancingShapesEffect);
+        gui.elements.push(madDancingShapesCheckbox);
+
+        const audioControlButton = new Button(20, 170, buttonsWidth, buttonsHeight, 'Suspend Audio', toggleAudio);
+
+        function toggleAudio() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    console.log('Audio resumed.');
+                    audioControlButton.text = 'Suspend Audio';
+                }).catch(err => {
+                    console.error('Error resuming audio:', err);
+
+                });
+            } else {
+                audioCtx.suspend().then(() => {
+                    console.log('Audio suspended.');
+                    audioControlButton.text = 'Resume Audio';
+
+                }).catch(err => {
+                    console.error('Error suspending audio:', err);
+                });
+            }
+        }
+
+        gui.elements.push(audioControlButton);
+
+        const analyser = audioCtx.createAnalyser();
+        const stream = navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+
+        stream.then((stream) => {
+            const source = audioCtx.createMediaStreamSource(stream);
+            source.connect(analyser);
+            //analyser.connect(audioCtx.destination);
+        });
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        let lastTime = performance.now();
+
+        animate();
+
+        // Aggiornamento della funzione getMyOutputAnalyser per calcolare separatamente i valori di bassi, medi e alti.
+        function getMyOutputAnalyser() {
+            const bass = calculateFrequency(dataArray, 20, 250);
+            const mid = calculateFrequency(dataArray, 250, 2000);
+            const treble = calculateFrequency(dataArray, 2000, 20000);
+
+            return { bass, mid, treble };
+        }
+
+        // Funzione ausiliaria per calcolare la frequenza in una specifica banda.
+        function calculateFrequency(dataArray, startFreq, endFreq) {
+            const startIdx = Math.floor(startFreq / (audioCtx.sampleRate / bufferLength));
+            const endIdx = Math.floor(endFreq / (audioCtx.sampleRate / bufferLength));
+            const slice = dataArray.slice(startIdx, endIdx);
+            return slice.reduce((acc, val) => acc + val, 0) / slice.length;
+        }
+        // Aggiornamento della funzione animate per aggiornare gli effetti audio durante ogni iterazione.
+        let loopAnmationValue = 0;
+        function animate() {
+            gui.update(deltaTime);
+            gui.draw();
+
+            myOutputAnalyser = getMyOutputAnalyser();
+            tunnelEffect.speed = myOutputAnalyser.bass / 100;
+            tunnelEffect.radius = myOutputAnalyser.mid / 100;
+            starRainEffect.speed = myOutputAnalyser.bass / 100;
+            starRainEffect.numStars = myOutputAnalyser.treble * 10;
+            analyser.getByteFrequencyData(dataArray);
+            //disegna lo spettro
+            let barWidth = (canvas.width / bufferLength) * 10;
+            let barHeight;
+            let x = 0;
+            let ctx = canvas.getContext('2d');
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = dataArray[i];
+                //il coloe dipende dalla frequenza
+                ctx.fillStyle = 'rgb(' + (barHeight + 100) + ',50,50)';
+                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight / 2);
+                x += barWidth + 1;
+            }
+            deltaTime = performance.now() - lastTime;
+            lastTime = performance.now();
+            //scrivi il tempo in basso a destra del canvas e limita la lunghezza a 5 caratteri
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText('Time: ' + deltaTime.toFixed(2), canvas.width - 100, canvas.height - 10);
+            //crea una animazione da paura in base alle frequenze
+
+            if (tunnelEffect.enabled) {
+                //fai qualcosa di divertente e dinamico conle frequenze
+                tunnelEffect.bass = myOutputAnalyser.bass;
+                tunnelEffect.mid = myOutputAnalyser.mid;
+                tunnelEffect.treble = myOutputAnalyser.treble;
+                tunnelEffect.update(deltaTime);
+                tunnelEffect.draw();
+            }
+            if (starRainEffect.enabled) {
+                starRainEffect.bass = myOutputAnalyser.bass;
+                starRainEffect.mid = myOutputAnalyser.mid;
+                starRainEffect.treble = myOutputAnalyser.treble;
+                starRainEffect.update(deltaTime);
+                starRainEffect.draw();
+            }
+            if (madDancingShapesEffect.enabled) {
+                madDancingShapesEffect.bass = myOutputAnalyser.bass;
+                madDancingShapesEffect.mid = myOutputAnalyser.mid;
+                madDancingShapesEffect.treble = myOutputAnalyser.treble;
+                madDancingShapesEffect.update(deltaTime);
+                madDancingShapesEffect.draw();
+            }
+            if (scrollingTextEffect.enabled) {
+                scrollingTextEffect.bass = myOutputAnalyser.bass;
+                scrollingTextEffect.mid = myOutputAnalyser.mid;
+                scrollingTextEffect.treble = myOutputAnalyser.treble;
+                scrollingTextEffect.update(deltaTime);
+                scrollingTextEffect.draw();
+            }
+            requestAnimationFrame(animate);
+        }
+
+
+
+
+
+
+
     </script>
-  </body>
+</body>
+
 </html>

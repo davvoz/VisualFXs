@@ -17,8 +17,6 @@
             overflow: hidden;
         }
 
-
-
         canvas {
             display: block;
             margin: 0 auto;
@@ -196,7 +194,7 @@
                 this.bass = 0;
                 this.mid = 0;
                 this.treble = 0;
-
+                this.fxType = [];
             }
             draw() {
                 throw new Error('draw method must be implemented');
@@ -226,6 +224,8 @@
                 //fai qualcosa di divertente e dinamico conle frequenze
                 this.ctx.save();
                 //disegna un cerchio al centro del canvas bello grande
+                applyEffects(this.ctx, this.fxType.map(type => ({ fxType: type, bass: this.bass, mid: this.mid, treble: this.treble })));
+
                 this.ctx.beginPath();
                 this.ctx.arc(this.canvas.width / 2, this.canvas.height / 2, this.radius * 200, 0, Math.PI * 2);
                 //stroke line parametrico 
@@ -236,8 +236,6 @@
                 this.ctx.strokeStyle = `rgb(${r},${g},${b})`;
                 this.ctx.lineWidth = 5 * this.bass / 2;
                 this.ctx.stroke();
-                this.ctx.restore();
-                this.ctx.save();
                 this.ctx.beginPath();
                 //disegna una spirale
                 this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
@@ -245,7 +243,7 @@
                     const angle = i * this.numParticles * 2 / this.numParticles;
                     const x = Math.cos(angle) * (this.radius * i);
                     const y = Math.sin(angle) * (this.radius * i);
-                    this.ctx.lineTo(x + this.bass, y-this.canvas.height / this.bass);
+                    this.ctx.lineTo(x + this.bass, y - this.canvas.height / this.bass);
                 }
                 this.ctx.strokeStyle = `rgb(${b},${r},${g})`;
                 this.ctx.lineWidth = 5 * this.bass / 2;
@@ -271,7 +269,7 @@
                 this.bass = 0;
                 this.mid = 0;
                 this.treble = 0;
-
+                this.starsSize = 1;
 
                 for (let i = 0; i < this.numStars; i++) {
                     this.stars.push({
@@ -279,7 +277,7 @@
                         x: Math.random() * this.canvas.width,
                         y: Math.random() * this.canvas.height,
                         speed: Math.random() * 2 + 1,
-                        size: Math.random() * 9 + 1
+                        size: Math.random() * 9 + this.starsSize
                     });
                 }
             }
@@ -398,10 +396,64 @@
             }
         }
 
+        class ImageEffect extends Effect {
+            constructor(canvasId, imageSrc, x,y,width,height) {
+                super(canvasId);
+                this.image = new Image();
+                this.image.src = imageSrc;
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
 
+                this.image.onload = () => {
+                    this.width = this.image.width;
+                    this.height = this.image.height;
+                };
+                this.bass = 0;
+                this.mid = 0;
+                this.treble = 0;
+                //fx type : distort, rotate, scale, translate
+            }
+
+            draw() {
+                this.ctx.save();
+                applyEffects(this.ctx, this.fxType.map(type => ({ fxType: type, bass: this.bass, mid: this.mid, treble: this.treble })));
+                this.ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+
+                this.ctx.restore();
+            }
+
+            update() {
+                //console.log('update');
+            }
+        }
+        function applyEffects(ctx, effects) {
+                    effects.forEach(effect => {
+                        switch (effect.fxType) {
+                            case 'rotate':
+                                ctx.rotate(effect.bass / 100);
+                                break;
+                            case 'translate':
+                                ctx.translate(effect.bass, effect.mid);
+                                break;
+                            case 'scale':
+                                ctx.scale(effect.bass / 100, effect.mid / 100);
+                                break;
+                            case 'distort':
+                                ctx.transform(effect.bass / 1000, effect.mid / 100, effect.treble / 100, effect.bass / 10, effect.mid / 10, effect.treble / 10);
+                                break;
+                            default:
+                                console.error('Unknown effect type:', effect.fxType);
+                                break;
+                        }
+                    });
+                }
+                
         const gui = new GUIFramework('canvas');
         const buttonsWidth = 130;
         const buttonsHeight = 30;
+
         const tunnelEffect = new TunnelEffect('canvas', 100, 10, 0.5);
         const checkbox = new Checkbox(20, 10, buttonsWidth, buttonsHeight, ' FX 1', false);
 
@@ -410,10 +462,38 @@
 
         const madDancingShapesEffect = new MadDancingShapesEffect('canvas', 100);
         const madDancingShapesCheckbox = new Checkbox(20, 90, buttonsWidth, buttonsHeight, ' FX 3', false);
-        //descrivi il programma in modo molto simpatico
+
         const spiegazione = 'Reality glitches dream electric';
         const scrollingTextEffect = new ScrollingTextEffect('canvas', spiegazione, 32);
         const scrollingTextCheckbox = new Checkbox(20, 130, buttonsWidth, buttonsHeight, ' FX 4', false);
+
+        const imageEffect = new ImageEffect('canvas', 'https://firebasestorage.googleapis.com/v0/b/wada-42dd4.appspot.com/o/images%2Fimageedit_2_5342943839.png?alt=media&token=95e1819b-4c8e-4279-84c4-d47fe9b2bda8',
+             500 , 50, 500, 500);
+        const imageCheckbox = new Checkbox(20, 170, buttonsWidth, buttonsHeight, ' FX 5', false);
+
+        const buttonGroupTypes = ['rotate', 'translate', 'scale', 'distort'];
+        const buttonGroup = [];
+
+        //valorizza i bottoni
+        buttonGroupTypes.forEach((type, index) => {
+            //Checkbox a finaco del bottone dell'immagine 
+            const checkboxes = new Checkbox(buttonsWidth + 20 + index * buttonsWidth + 20, 170 , buttonsWidth, buttonsHeight, type, false);
+            checkboxes.onClick = () => {
+                imageEffect.fxType = imageEffect.fxType.includes(type) ? imageEffect.fxType.filter(t => t !== type) : [...imageEffect.fxType, type];
+                checkboxes.checked = imageEffect.fxType.includes(type);
+            };  
+            buttonGroup.push(checkboxes);
+        });
+
+        const buttonGroupFx1 = [];
+        buttonGroupTypes.forEach((type, index) => {
+            const checkboxes = new Checkbox(buttonsWidth + 20 + index * buttonsWidth + 20, 10, buttonsWidth, buttonsHeight, type, false);
+            checkboxes.onClick = () => {
+                tunnelEffect.fxType = tunnelEffect.fxType.includes(type) ? tunnelEffect.fxType.filter(t => t !== type) : [...tunnelEffect.fxType, type];
+                checkboxes.checked = tunnelEffect.fxType.includes(type);
+            };
+            buttonGroupFx1.push(checkboxes);
+        });
 
         const mapControllerFX = {
             'FX 4': {
@@ -439,58 +519,34 @@
                 checkbox: madDancingShapesCheckbox,
                 enabled: false,
                 params: {}
-            }
-
-        };
-
-        starRainCheckbox.onClick = () => {
-            mapControllerFX['FX 2'].enabled = !mapControllerFX['FX 2'].enabled;
-            if (mapControllerFX['FX 2'].enabled) {
-                starRainEffect.enabled = true;
-                starRainCheckbox.checked = true;
-            } else {
-                starRainEffect.enabled = false;
-                starRainCheckbox.checked = false;
+            },
+            'FX 5': {
+                effect: imageEffect,
+                checkbox: imageCheckbox,
+                enabled: false,
+                params: {}
             }
         };
 
-        //come associo l'effetto al checkbox?
-        checkbox.onClick = () => {
-            mapControllerFX['FX 1'].enabled = !mapControllerFX['FX 1'].enabled;
-            if (mapControllerFX['FX 1'].enabled) {
-                tunnelEffect.enabled = true;
-                checkbox.checked = true;
-            } else {
-                tunnelEffect.enabled = false;
-                checkbox.checked = false;
-            }
-        };
+        function associateCheckboxWithEffect(fxKey) {
+            const fx = mapControllerFX[fxKey];
+            fx.checkbox.onClick = () => {
+                fx.enabled = !fx.enabled;
+                fx.effect.enabled = fx.enabled;
+                fx.checkbox.checked = fx.enabled;
+            };
+        }
 
-        madDancingShapesCheckbox.onClick = () => {
-            mapControllerFX['FX 3'].enabled = !mapControllerFX['FX 3'].enabled;
-            if (mapControllerFX['FX 3'].enabled) {
-                madDancingShapesEffect.enabled = true;
-                madDancingShapesCheckbox.checked = true;
-            } else {
-                madDancingShapesEffect.enabled = false;
-                madDancingShapesCheckbox.checked = false;
-            }
-        };
-
-        scrollingTextCheckbox.onClick = () => {
-            mapControllerFX['FX 4'].enabled = !mapControllerFX['FX 4'].enabled;
-            if (mapControllerFX['FX 4'].enabled) {
-                scrollingTextEffect.enabled = true;
-                scrollingTextCheckbox.checked = true;
-            } else {
-                scrollingTextEffect.enabled = false;
-                scrollingTextCheckbox.checked = false;
-            }
-        };
+        Object.keys(mapControllerFX).forEach(associateCheckboxWithEffect);
 
         checkbox.enabled = true;
         starRainCheckbox.enabled = true;
         madDancingShapesCheckbox.enabled = true;
+        scrollingTextCheckbox.enabled = true;
+        imageCheckbox.enabled = true;
+
+
+
         gui.elements.push(scrollingTextEffect);
         gui.elements.push(scrollingTextCheckbox);
         gui.elements.push(checkbox);
@@ -502,12 +558,22 @@
         gui.elements.push(madDancingShapesEffect);
         gui.elements.push(madDancingShapesCheckbox);
 
-        const audioControlButton = new Button(20, 170, buttonsWidth, buttonsHeight, 'Suspend Audio', toggleAudio);
+        gui.elements.push(imageEffect);
+        gui.elements.push(imageCheckbox);
+        buttonGroup.forEach(element => {
+            gui.elements.push(element);
+        });
 
-        function toggleAudio() {
+        buttonGroupFx1.forEach(element => {
+            gui.elements.push(element);
+        });
+
+        const analyser = audioCtx.createAnalyser();
+        const audioControlButton = new Button(20, 210, buttonsWidth, buttonsHeight, 'Suspend Audio', () => {
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume().then(() => {
                     console.log('Audio resumed.');
+                    analyser.connect(audioCtx.destination);
                     audioControlButton.text = 'Suspend Audio';
                 }).catch(err => {
                     console.error('Error resuming audio:', err);
@@ -522,11 +588,9 @@
                     console.error('Error suspending audio:', err);
                 });
             }
-        }
-
+        });
         gui.elements.push(audioControlButton);
 
-        const analyser = audioCtx.createAnalyser();
         const stream = navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 
         stream.then((stream) => {
@@ -583,41 +647,29 @@
             }
             deltaTime = performance.now() - lastTime;
             lastTime = performance.now();
-            //scrivi il tempo in basso a destra del canvas e limita la lunghezza a 5 caratteri
-            ctx.fillStyle = 'black';
-            ctx.font = '20px Arial';
-            ctx.fillText('Time: ' + deltaTime.toFixed(2), canvas.width - 100, canvas.height - 10);
             //crea una animazione da paura in base alle frequenze
 
-            if (tunnelEffect.enabled) {
-                //fai qualcosa di divertente e dinamico conle frequenze
-                tunnelEffect.bass = myOutputAnalyser.bass;
-                tunnelEffect.mid = myOutputAnalyser.mid;
-                tunnelEffect.treble = myOutputAnalyser.treble;
-                tunnelEffect.update(deltaTime);
-                tunnelEffect.draw();
+            function updateAndDrawEffect(effect) {
+                if (effect.enabled) {
+                    effect.bass = myOutputAnalyser.bass;
+                    effect.mid = myOutputAnalyser.mid;
+                    effect.treble = myOutputAnalyser.treble;
+                    if(effect instanceof StarRainEffect){
+                        effect.numStars = myOutputAnalyser.bass * 10;
+                        effect.speed = myOutputAnalyser.mid / 100;
+                        effect.starsSize = myOutputAnalyser.treble ;
+                    }
+                    effect.update(deltaTime);
+                    effect.draw();
+                }
             }
-            if (starRainEffect.enabled) {
-                starRainEffect.bass = myOutputAnalyser.bass;
-                starRainEffect.mid = myOutputAnalyser.mid;
-                starRainEffect.treble = myOutputAnalyser.treble;
-                starRainEffect.update(deltaTime);
-                starRainEffect.draw();
-            }
-            if (madDancingShapesEffect.enabled) {
-                madDancingShapesEffect.bass = myOutputAnalyser.bass;
-                madDancingShapesEffect.mid = myOutputAnalyser.mid;
-                madDancingShapesEffect.treble = myOutputAnalyser.treble;
-                madDancingShapesEffect.update(deltaTime);
-                madDancingShapesEffect.draw();
-            }
-            if (scrollingTextEffect.enabled) {
-                scrollingTextEffect.bass = myOutputAnalyser.bass;
-                scrollingTextEffect.mid = myOutputAnalyser.mid;
-                scrollingTextEffect.treble = myOutputAnalyser.treble;
-                scrollingTextEffect.update(deltaTime);
-                scrollingTextEffect.draw();
-            }
+
+            updateAndDrawEffect(tunnelEffect);
+            updateAndDrawEffect(starRainEffect);
+            updateAndDrawEffect(madDancingShapesEffect);
+            updateAndDrawEffect(scrollingTextEffect);
+            updateAndDrawEffect(imageEffect);
+
             requestAnimationFrame(animate);
         }
 

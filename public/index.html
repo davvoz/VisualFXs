@@ -29,48 +29,38 @@
 
     <canvas id="canvas"></canvas>
     <script>
-        //crea una costante che prende l'audio dal mic
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();//C:\Progetti\vanilla\VisualFXs\index.html
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const stream = navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        // Audio setup
+        const analyser = audioCtx.createAnalyser();
+        // Stream setup
+        stream.then((stream) => {
+            const source = audioCtx.createMediaStreamSource(stream);
+            source.connect(analyser);
+        });
         let deltaTime = 0;
+        // Animation setup
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        let lastTime = performance.now();
         class GUIFramework {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
                 this.ctx = this.canvas.getContext('2d');
-                //TUTTO SCHERMO
                 this.canvas.width = window.innerWidth;
                 this.canvas.height = window.innerHeight;
                 this.elements = [];
                 this.canvas.addEventListener('click', this.handleClick.bind(this));
+                this.background = 'black';
             }
 
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                //sfondo grigio figo
-                this.ctx.fillStyle = 'black';
+                this.ctx.fillStyle = this.background;
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-                //ordina gli elementi in base al tipo , se il tipo è controller disegnalo sotto  a tutto
-                this.elements.sort((a, b) => {
-                    if (a.type === 'controller') {
-                        return 1;
-                    }
-                    return -1;
-                });
-                // Disegna gli elementi controllatori
-                this.elements.forEach((element) => {
-                    if (element.draw && element.type === 'controller') {
-                        element.update();
-                        element.draw(this.ctx);
-                    }
-                });
-                // Disegna gli effetti abilitati
-                Object.values(mapControllerFX).forEach(controller => {
-                    if (controller.enabled && controller.effect.draw) {
-                        controller.effect.update();
-                        controller.effect.draw();
-                    }
-                });
-
+                // Disegna gli effetti abilitati e i controlli associati mettendo sotto i controlli
+                this.elements.filter(element => element.type !== 'controller' && element.enabled).forEach(element => element.draw(this.ctx));
+                this.elements.filter(element => element.type === 'controller').forEach(element => element.draw(this.ctx));
 
             }
 
@@ -119,10 +109,6 @@
                 return clickX >= this.x && clickX <= this.x + this.width &&
                     clickY >= this.y && clickY <= this.y + this.height;
             }
-
-            update() {
-                //console.log('update');
-            }
         }
 
         class TextBox {
@@ -139,16 +125,13 @@
                 //sfondo bianco
                 ctx.fillStyle = 'white';
                 ctx.fillRect(this.x, this.y, this.width, this.height);
-
                 ctx.fillStyle = 'black';
                 ctx.font = this.height + 'px Arial';
                 ctx.fillText(this.value, this.x + 10, this.y + 25);
                 ctx.strokeStyle = 'black';
                 ctx.strokeRect(this.x, this.y, this.width, this.height);
             }
-            update() {
-                //console.log('update');
-            }
+
         }
 
         class Checkbox extends TextBox {
@@ -156,6 +139,7 @@
                 super(x, y, width, height);
                 this.text = text;
                 this.checked = checked;
+                this.type = 'controller';
             }
 
             draw(ctx) {
@@ -180,9 +164,6 @@
                     clickY >= this.y && clickY <= this.y + this.height;
             }
 
-            update() {
-                //console.log('update');
-            }
         }
 
         class Effect {
@@ -201,6 +182,10 @@
             }
             update() {
                 throw new Error('update method must be implemented');
+            }
+            updatePosition(x, y) {
+                this.x = x;
+                this.y = y;
             }
         }
 
@@ -224,7 +209,7 @@
                 //fai qualcosa di divertente e dinamico conle frequenze
                 this.ctx.save();
                 //disegna un cerchio al centro del canvas bello grande
-                applyEffects(this.ctx, this.fxType.map(type => ({ fxType: type, bass: this.bass, mid: this.mid, treble: this.treble })));
+                applyEffects(this.ctx, this.fxType.map(type => ({ fxType: type, bass: this.bass, mid: this.mid, treble: this.treble })), this.x, this.y);
 
                 this.ctx.beginPath();
                 this.ctx.arc(this.canvas.width / 2, this.canvas.height / 2, this.radius * 200, 0, Math.PI * 2);
@@ -252,15 +237,11 @@
 
             }
 
-            onmousemove(event) {
-                // this.radius = event.clientX;
-            }
         }
 
         class StarRainEffect extends Effect {
             constructor(canvas, numStars, speed) {
                 super(canvas);
-
                 //particelle a velocità diverse
                 this.numStars = numStars;
                 this.speed = speed;
@@ -273,7 +254,6 @@
 
                 for (let i = 0; i < this.numStars; i++) {
                     this.stars.push({
-
                         x: Math.random() * this.canvas.width,
                         y: Math.random() * this.canvas.height,
                         speed: Math.random() * 2 + 1,
@@ -283,10 +263,8 @@
             }
 
             draw() {
-                // Draw stars
                 this.ctx.save();
                 this.stars.forEach(star => {
-                    //fillStyle parametrico
                     this.ctx.fillStyle = `rgba(${this.bass},${this.mid},${this.treble},0.5)`;
                     this.ctx.beginPath();
                     this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
@@ -299,7 +277,6 @@
 
                 this.time += deltaTime;
                 this.stars.forEach(star => {
-                    //fai una cosa a tempo
                     star.y += star.speed;
                     if (star.y > this.canvas.height) {
                         star.y = 0;
@@ -307,6 +284,7 @@
 
                 });
             }
+
         }
 
         class MadDancingShapesEffect extends Effect {
@@ -340,8 +318,8 @@
                     //LE SPIRALI HANNO ORIGINI DIVERSE
                     this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
                     this.ctx.rotate(spiral.angle + this.mid);
-                    this.ctx.moveTo(spiral.radius, this.treble);
-                    this.ctx.lineTo(spiral.radius + this.treble, this.bass);
+                    this.ctx.moveTo(1, this.treble);
+                    this.ctx.lineTo(spiral.radius + 600, this.bass);
                     const r = 255 * this.bass / 100;
                     const g = 255 * this.mid / 100;
                     const b = 255 * this.treble / 100;
@@ -361,35 +339,35 @@
                 });
             }
         }
-
         class ScrollingTextEffect extends Effect {
             constructor(canvasId, text, fontSize) {
                 super(canvasId);
                 this.text = text;
                 this.fontSize = fontSize;
-                this.x = this.canvas.width;
+                this.x = this.canvas.width; // Inizialmente posizionato fuori dal lato destro
                 this.y = this.canvas.height / 2; // Centrato verticalmente
                 this.speed = 2;
+                this.textWidth = this.ctx.measureText(this.text).width;
             }
 
             draw() {
-                //il colore del testo dipende dalla frequenza
+                // Il colore del testo dipende dalla frequenza
                 this.ctx.save();
                 const r = 255 * this.bass / 100;
                 const g = 255 * this.mid / 100;
                 const b = 255 * this.treble / 100;
                 this.ctx.fillStyle = `rgb(${b},${g},${r})`;
-                //this.ctx.font = `${70 + this.fontSize + this.bass / 32}px Arial`;
-                //usa il font figo
+                // Usa il font figo
                 this.ctx.font = `${70 + this.fontSize + this.bass / 32}px 'Kode Mono', monospace`;
-                //che font abbiamo ?    
+                // Disegna il testo alla posizione corrente
                 this.ctx.fillText(this.text, this.x, this.y);
-
                 this.ctx.restore();
             }
 
             update(deltaTime) {
+                // Sposta il testo verso sinistra
                 this.x -= this.speed;
+                // Se il testo è completamente fuori dal lato sinistro, riportalo fuori dal lato destro
                 if (this.x < -this.ctx.measureText(this.text).width) {
                     this.x = this.canvas.width;
                 }
@@ -397,7 +375,7 @@
         }
 
         class ImageEffect extends Effect {
-            constructor(canvasId, imageSrc, x,y,width,height) {
+            constructor(canvasId, imageSrc, x, y, width, height) {
                 super(canvasId);
                 this.image = new Image();
                 this.image.src = imageSrc;
@@ -418,250 +396,215 @@
 
             draw() {
                 this.ctx.save();
-                applyEffects(this.ctx, this.fxType.map(type => ({ fxType: type, bass: this.bass, mid: this.mid, treble: this.treble })));
+                applyEffects(this.ctx, this.fxType.map(type => ({ fxType: type, bass: this.bass, mid: this.mid, treble: this.treble })), this.x, this.y);
                 this.ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
 
                 this.ctx.restore();
             }
 
             update() {
-                //console.log('update');
+                //fai qualcosa di divertente e dinamico conle frequenze
+
             }
         }
-        function applyEffects(ctx, effects) {
-                    effects.forEach(effect => {
-                        switch (effect.fxType) {
-                            case 'rotate':
-                                ctx.rotate(effect.bass / 100);
-                                break;
-                            case 'translate':
-                                ctx.translate(effect.bass, effect.mid);
-                                break;
-                            case 'scale':
-                                ctx.scale(effect.bass / 100, effect.mid / 100);
-                                break;
-                            case 'distort':
-                                ctx.transform(effect.bass / 1000, effect.mid / 100, effect.treble / 100, effect.bass / 10, effect.mid / 10, effect.treble / 10);
-                                break;
-                            default:
-                                console.error('Unknown effect type:', effect.fxType);
-                                break;
-                        }
-                    });
+
+        function applyEffects(ctx, effects, x, y) {
+            effects.forEach(effect => {
+                switch (effect.fxType) {
+                    case 'rotate':
+                        ctx.rotate(- Math.PI / 180 * effect.mid);
+                        break;
+                    case 'translate':
+                        ctx.translate(effect.bass, effect.mid);
+                        break;
+                    case 'scale':
+                        ctx.scale(effect.bass / 100, effect.mid / 100);
+                        break;
+                    case 'distort':
+                        ctx.transform(effect.bass / 100, effect.mid / 100, effect.treble / 100, effect.bass / 100, 0, 0);
+                        break;
+                    default:
+                        console.error('Unknown effect type:', effect.fxType);
+                        break;
                 }
-                
+            });
+        }
+
         const gui = new GUIFramework('canvas');
-        const buttonsWidth = 130;
+        const buttonsWidth = 165;
         const buttonsHeight = 30;
 
+        // Function to create an effect checkbox and associate it with its effect
+        function createEffectCheckbox(x, y, effect, effectName, fxType) {
+            const checkbox = new Checkbox(x, y, buttonsWidth, buttonsHeight, effectName, false);
+            checkbox.onClick = () => {
+                effect.fxType = effect.fxType.includes(fxType) ? effect.fxType.filter(t => t !== fxType) : [...effect.fxType, fxType];
+                checkbox.checked = effect.fxType.includes(fxType);
+            };
+            return checkbox;
+        }
+
         const tunnelEffect = new TunnelEffect('canvas', 100, 10, 0.5);
-        const checkbox = new Checkbox(20, 10, buttonsWidth, buttonsHeight, ' FX 1', false);
+        const checkbox1 = createEffectCheckbox(20, 10 + 40, tunnelEffect, ' FX 1', 'tunnel');
 
         const starRainEffect = new StarRainEffect('canvas', 100, 0.01);
-        const starRainCheckbox = new Checkbox(20, 50, buttonsWidth, buttonsHeight, ' FX 2', false);
+        const checkbox2 = createEffectCheckbox(20, 50 + 40, starRainEffect, ' FX 2', 'starRain');
 
         const madDancingShapesEffect = new MadDancingShapesEffect('canvas', 100);
-        const madDancingShapesCheckbox = new Checkbox(20, 90, buttonsWidth, buttonsHeight, ' FX 3', false);
+        const checkbox3 = createEffectCheckbox(20, 90 + 40, madDancingShapesEffect, ' FX 3', 'madDancingShapes');
 
         const spiegazione = 'Reality glitches dream electric';
         const scrollingTextEffect = new ScrollingTextEffect('canvas', spiegazione, 32);
-        const scrollingTextCheckbox = new Checkbox(20, 130, buttonsWidth, buttonsHeight, ' FX 4', false);
+        const checkbox4 = createEffectCheckbox(20, 130 + 40, scrollingTextEffect, ' FX 4', 'scrollingText');
 
-        const imageEffect = new ImageEffect('canvas', 'https://firebasestorage.googleapis.com/v0/b/wada-42dd4.appspot.com/o/images%2Fimageedit_2_5342943839.png?alt=media&token=95e1819b-4c8e-4279-84c4-d47fe9b2bda8',
-             500 , 50, 500, 500);
-        const imageCheckbox = new Checkbox(20, 170, buttonsWidth, buttonsHeight, ' FX 5', false);
+        const imageEffect = new ImageEffect('canvas', 'https://firebasestorage.googleapis.com/v0/b/wada-42dd4.appspot.com/o/images%2Fimageedit_2_5342943839.png?alt=media&token=95e1819b-4c8e-4279-84c4-d47fe9b2bda8', 500, 50, 500, 500);
+        const checkbox5 = createEffectCheckbox(20, 170 + 40, imageEffect, ' FX 5', 'image');
 
-        const buttonGroupTypes = ['rotate', 'translate', 'scale', 'distort'];
-        const buttonGroup = [];
+        const buttonGroupTypes = ['translate', 'scale', 'distort'];
 
-        //valorizza i bottoni
-        buttonGroupTypes.forEach((type, index) => {
-            //Checkbox a finaco del bottone dell'immagine 
-            const checkboxes = new Checkbox(buttonsWidth + 20 + index * buttonsWidth + 20, 170 , buttonsWidth, buttonsHeight, type, false);
-            checkboxes.onClick = () => {
-                imageEffect.fxType = imageEffect.fxType.includes(type) ? imageEffect.fxType.filter(t => t !== type) : [...imageEffect.fxType, type];
-                checkboxes.checked = imageEffect.fxType.includes(type);
-            };  
-            buttonGroup.push(checkboxes);
-        });
+        const createButtonGroup = (y, effect) => {
+            return buttonGroupTypes.map((type, index) => {
+                const checkbox = createEffectCheckbox(buttonsWidth + 20 + index * buttonsWidth + 20, y + 40, effect, type, type);
+                return checkbox;
+            });
+        };
 
-        const buttonGroupFx1 = [];
-        buttonGroupTypes.forEach((type, index) => {
-            const checkboxes = new Checkbox(buttonsWidth + 20 + index * buttonsWidth + 20, 10, buttonsWidth, buttonsHeight, type, false);
-            checkboxes.onClick = () => {
-                tunnelEffect.fxType = tunnelEffect.fxType.includes(type) ? tunnelEffect.fxType.filter(t => t !== type) : [...tunnelEffect.fxType, type];
-                checkboxes.checked = tunnelEffect.fxType.includes(type);
+        const buttonGroup = createButtonGroup(170, imageEffect);
+        const buttonGroupFx1 = createButtonGroup(10, tunnelEffect);
+
+        function createButtonGroupScrollText(y, effect) {
+            const checkbox2 = new Checkbox(buttonsWidth + 20 + buttonsWidth + 20, y + 40, buttonsWidth, buttonsHeight, 'Insert', false);
+            checkbox2.onClick = () => {
+                const text = prompt('Enter text');
+                scrollingTextEffect.text = text;
             };
-            buttonGroupFx1.push(checkboxes);
-        });
+            //creiamo un bottone per ingrandire il testo
+            const checkbox3 = new Button(buttonsWidth + 20 + buttonsWidth + 20 + buttonsWidth, y + 40, buttonsWidth, buttonsHeight, 'Bigger', () => {
+                scrollingTextEffect.fontSize += 10;
+            });
+            //creiamo un bottone per ridurre il testo
+            const checkbox4 = new Button(buttonsWidth + 40, y + 40, buttonsWidth, buttonsHeight, 'Smaller', () => {
+                scrollingTextEffect.fontSize -= 10;
+            });
+            return [checkbox2, checkbox3, checkbox4];
+        }
+
+        const buttonGroupScrollText = createButtonGroupScrollText(130, scrollingTextEffect);
 
         const mapControllerFX = {
             'FX 4': {
                 effect: scrollingTextEffect,
-                checkbox: scrollingTextCheckbox,
-                enabled: false,
-                params: {}
+                checkbox: checkbox4
             },
             'FX 1': {
                 effect: tunnelEffect,
-                checkbox: checkbox,
-                enabled: false,
-                params: {}
+                checkbox: checkbox1
             },
             'FX 2': {
                 effect: starRainEffect,
-                checkbox: starRainCheckbox,
-                enabled: false,
-                params: {}
+                checkbox: checkbox2
             },
             'FX 3': {
                 effect: madDancingShapesEffect,
-                checkbox: madDancingShapesCheckbox,
-                enabled: false,
-                params: {}
+                checkbox: checkbox3
             },
             'FX 5': {
                 effect: imageEffect,
-                checkbox: imageCheckbox,
-                enabled: false,
-                params: {}
+                checkbox: checkbox5
             }
         };
 
+        // Function to associate a checkbox with its effect
         function associateCheckboxWithEffect(fxKey) {
-            const fx = mapControllerFX[fxKey];
-            fx.checkbox.onClick = () => {
-                fx.enabled = !fx.enabled;
-                fx.effect.enabled = fx.enabled;
-                fx.checkbox.checked = fx.enabled;
+            const { effect, checkbox } = mapControllerFX[fxKey];
+            checkbox.onClick = () => {
+                effect.enabled = !effect.enabled;
+                checkbox.checked = effect.enabled;
             };
         }
 
         Object.keys(mapControllerFX).forEach(associateCheckboxWithEffect);
 
-        checkbox.enabled = true;
-        starRainCheckbox.enabled = true;
-        madDancingShapesCheckbox.enabled = true;
-        scrollingTextCheckbox.enabled = true;
-        imageCheckbox.enabled = true;
+        // Enable checkboxes
+        checkbox1.enabled = true;
+        checkbox2.enabled = true;
+        checkbox3.enabled = true;
+        checkbox4.enabled = true;
+        checkbox5.enabled = true;
 
+        // Add elements to the GUI
+        const elementsToAdd = [
+            scrollingTextEffect,    // Add scrolling text effect first to draw it below the buttons
+            checkbox1, checkbox2, checkbox3, checkbox4, checkbox5,
+            starRainEffect, tunnelEffect, madDancingShapesEffect, imageEffect,
+            ...buttonGroup, ...buttonGroupFx1, ...buttonGroupScrollText
+        ];
+        elementsToAdd.forEach(element => gui.elements.push(element));
 
+        const backgrounds = ['black', 'white'];
+        let currentBackground = backgrounds[0];
 
-        gui.elements.push(scrollingTextEffect);
-        gui.elements.push(scrollingTextCheckbox);
-        gui.elements.push(checkbox);
-        gui.elements.push(starRainCheckbox);
-
-        gui.elements.push(starRainEffect);
-        gui.elements.push(tunnelEffect);
-
-        gui.elements.push(madDancingShapesEffect);
-        gui.elements.push(madDancingShapesCheckbox);
-
-        gui.elements.push(imageEffect);
-        gui.elements.push(imageCheckbox);
-        buttonGroup.forEach(element => {
-            gui.elements.push(element);
+        const audioControlButton = new Button(20, 10, buttonsWidth, buttonsHeight, 'change background', () => {
+            currentBackground = currentBackground === backgrounds[0] ? backgrounds[1] : backgrounds[0];
+            gui.background = currentBackground;
         });
 
-        buttonGroupFx1.forEach(element => {
-            gui.elements.push(element);
-        });
-
-        const analyser = audioCtx.createAnalyser();
-        const audioControlButton = new Button(20, 210, buttonsWidth, buttonsHeight, 'Suspend Audio', () => {
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume().then(() => {
-                    console.log('Audio resumed.');
-                    analyser.connect(audioCtx.destination);
-                    audioControlButton.text = 'Suspend Audio';
-                }).catch(err => {
-                    console.error('Error resuming audio:', err);
-
-                });
-            } else {
-                audioCtx.suspend().then(() => {
-                    console.log('Audio suspended.');
-                    audioControlButton.text = 'Resume Audio';
-
-                }).catch(err => {
-                    console.error('Error suspending audio:', err);
-                });
-            }
-        });
         gui.elements.push(audioControlButton);
 
-        const stream = navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 
-        stream.then((stream) => {
-            const source = audioCtx.createMediaStreamSource(stream);
-            source.connect(analyser);
-            //analyser.connect(audioCtx.destination);
-        });
-
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        let lastTime = performance.now();
-
-        animate();
-
-        // Aggiornamento della funzione getMyOutputAnalyser per calcolare separatamente i valori di bassi, medi e alti.
         function getMyOutputAnalyser() {
             const bass = calculateFrequency(dataArray, 20, 250);
             const mid = calculateFrequency(dataArray, 250, 2000);
             const treble = calculateFrequency(dataArray, 2000, 20000);
-
             return { bass, mid, treble };
         }
 
-        // Funzione ausiliaria per calcolare la frequenza in una specifica banda.
         function calculateFrequency(dataArray, startFreq, endFreq) {
             const startIdx = Math.floor(startFreq / (audioCtx.sampleRate / bufferLength));
             const endIdx = Math.floor(endFreq / (audioCtx.sampleRate / bufferLength));
             const slice = dataArray.slice(startIdx, endIdx);
             return slice.reduce((acc, val) => acc + val, 0) / slice.length;
         }
-        // Aggiornamento della funzione animate per aggiornare gli effetti audio durante ogni iterazione.
-        let loopAnmationValue = 0;
+
         function animate() {
-            gui.update(deltaTime);
             gui.draw();
 
-            myOutputAnalyser = getMyOutputAnalyser();
+            const myOutputAnalyser = getMyOutputAnalyser();
             tunnelEffect.speed = myOutputAnalyser.bass / 100;
             tunnelEffect.radius = myOutputAnalyser.mid / 100;
             starRainEffect.speed = myOutputAnalyser.bass / 100;
             starRainEffect.numStars = myOutputAnalyser.treble * 10;
             analyser.getByteFrequencyData(dataArray);
-            //disegna lo spettro
-            let barWidth = (canvas.width / bufferLength) * 10;
-            let barHeight;
+
+            const ctx = canvas.getContext('2d');
+            const barWidth = (canvas.width / bufferLength) * 10;
             let x = 0;
-            let ctx = canvas.getContext('2d');
             for (let i = 0; i < bufferLength; i++) {
-                barHeight = dataArray[i];
-                //il coloe dipende dalla frequenza
-                ctx.fillStyle = 'rgb(' + (barHeight + 100) + ',50,50)';
+                const barHeight = dataArray[i];
+                //fai le barre colorate di arcobaleno
+                //falle divertenti
+                ctx.fillStyle = `rgb(${barHeight},${myOutputAnalyser.mid},${myOutputAnalyser.treble})`;
+
                 ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight / 2);
                 x += barWidth + 1;
             }
+
             deltaTime = performance.now() - lastTime;
             lastTime = performance.now();
-            //crea una animazione da paura in base alle frequenze
 
             function updateAndDrawEffect(effect) {
                 if (effect.enabled) {
                     effect.bass = myOutputAnalyser.bass;
                     effect.mid = myOutputAnalyser.mid;
                     effect.treble = myOutputAnalyser.treble;
-                    if(effect instanceof StarRainEffect){
+                    if (effect instanceof StarRainEffect) {
                         effect.numStars = myOutputAnalyser.bass * 10;
                         effect.speed = myOutputAnalyser.mid / 100;
-                        effect.starsSize = myOutputAnalyser.treble ;
+                        effect.starsSize = myOutputAnalyser.treble;
                     }
                     effect.update(deltaTime);
-                    effect.draw();
                 }
+
             }
 
             updateAndDrawEffect(tunnelEffect);
@@ -673,13 +616,11 @@
             requestAnimationFrame(animate);
         }
 
-
-
-
-
+        animate();
 
 
     </script>
+
 </body>
 
 </html>

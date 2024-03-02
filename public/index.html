@@ -43,6 +43,8 @@
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
         let lastTime = performance.now();
+        let enableFXs = true;
+        let enableControls = true;
         class GUIFramework {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -59,9 +61,13 @@
                 this.ctx.fillStyle = this.background;
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 // Disegna gli effetti abilitati e i controlli associati mettendo sotto i controlli
-                this.elements.filter(element => element.type !== 'controller' && element.enabled).forEach(element => element.draw(this.ctx));
-                this.elements.filter(element => element.type === 'controller').forEach(element => element.draw(this.ctx));
-
+                if (enableFXs) {
+                    this.elements.filter(element => element.type !== 'controller' && element.enabled).forEach(element => element.draw(this.ctx));
+                }
+                if (enableControls) {
+                    this.elements.filter(element => element.type === 'controller').forEach(element => element.draw(this.ctx));
+                }
+                this.elements.filter(element => element.type === 'exlusive-controller').forEach(element => element.draw(this.ctx));
             }
 
             update(deltaTime) {
@@ -87,22 +93,25 @@
         }
 
         class Button {
-            constructor(x, y, width, height, text, onClick) {
+            constructor(x, y, width, height, text, onClick, color) {
                 this.x = x;
                 this.y = y;
                 this.width = width;
                 this.height = height;
                 this.text = text;
                 this.onClick = onClick;
-                this.type = 'controller'
+                this.type = 'controller';
+                this.color = color;
             }
 
             draw(ctx) {
-                ctx.fillStyle = '#555';
+                ctx.fillStyle = this.color || '#000';
                 ctx.fillRect(this.x, this.y, this.width, this.height);
                 ctx.fillStyle = '#fff';
                 ctx.font = '16px Arial';
                 ctx.fillText(this.text, this.x + 10, this.y + 25);
+                ctx.strokeStyle = '#000';
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
             }
 
             isClicked(clickX, clickY) {
@@ -339,6 +348,7 @@
                 });
             }
         }
+
         class ScrollingTextEffect extends Effect {
             constructor(canvasId, text, fontSize) {
                 super(canvasId);
@@ -358,7 +368,8 @@
                 const b = 255 * this.treble / 100;
                 this.ctx.fillStyle = `rgb(${b},${g},${r})`;
                 // Usa il font figo
-                this.ctx.font = `${70 + this.fontSize + this.bass / 32}px 'Kode Mono', monospace`;
+                this.ctx.font = `${70 + this.fontSize}px 'Kode Mono', monospace    `;
+                this.textWidth = this.ctx.measureText(this.text);
                 // Disegna il testo alla posizione corrente
                 this.ctx.fillText(this.text, this.x, this.y);
                 this.ctx.restore();
@@ -366,9 +377,9 @@
 
             update(deltaTime) {
                 // Sposta il testo verso sinistra
-                this.x -= this.speed;
-                // Se il testo è completamente fuori dal lato sinistro, riportalo fuori dal lato destro
-                if (this.x < -this.ctx.measureText(this.text).width) {
+                this.x -= this.speed * deltaTime / 16;
+                // Se il testo ha superato il margine sinistro del canvas, riportalo alla posizione iniziale
+                if (this.x < -this.textWidth.width) {
                     this.x = this.canvas.width;
                 }
             }
@@ -391,20 +402,59 @@
                 this.bass = 0;
                 this.mid = 0;
                 this.treble = 0;
-                //fx type : distort, rotate, scale, translate
             }
 
             draw() {
                 this.ctx.save();
                 applyEffects(this.ctx, this.fxType.map(type => ({ fxType: type, bass: this.bass, mid: this.mid, treble: this.treble })), this.x, this.y);
                 this.ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
-
                 this.ctx.restore();
             }
 
             update() {
-                //fai qualcosa di divertente e dinamico conle frequenze
+                // Do nothing
+            }
+        }
 
+        class SpectrumBarAnalyser extends Effect {
+            constructor(canvasId, numBars) {
+                super(canvasId);
+                this.numBars = numBars;
+                this.bars = [];
+                this.time = 0;
+                this.bass = 0;
+                this.mid = 0;
+                this.treble = 0;
+                this.initBars();
+            }
+
+            initBars() {
+                for (let i = 0; i < this.numBars; i++) {
+                    this.bars.push({
+                        x: i * 10,
+                        y: 0,
+                        width: 10,
+                        height: 0
+                    });
+                }
+            }
+
+            draw() {
+                this.ctx.save();
+                this.bars.forEach((bar, index) => {
+                    //fai le barre colorate di arcobaleno
+                    //falle divertenti
+                    this.ctx.fillStyle = `rgb(${this.bass},${this.mid},${this.treble})`;
+                    this.ctx.fillRect(bar.x, this.canvas.height - bar.height, bar.width, bar.height / 2);
+                });
+                this.ctx.restore();
+            }
+
+            update(deltaTime) {
+                this.time += deltaTime;
+                this.bars.forEach((bar, index) => {
+                    bar.height = dataArray[index];
+                });
             }
         }
 
@@ -460,6 +510,10 @@
         const imageEffect = new ImageEffect('canvas', 'https://firebasestorage.googleapis.com/v0/b/wada-42dd4.appspot.com/o/images%2Fimageedit_2_5342943839.png?alt=media&token=95e1819b-4c8e-4279-84c4-d47fe9b2bda8', 500, 50, 500, 500);
         const checkbox5 = createEffectCheckbox(20, 170 + 40, imageEffect, ' FX 5', 'image');
 
+        const barAnalyzerEffect = new SpectrumBarAnalyser('canvas', canvas.width / 10);
+        const checkbox6 = createEffectCheckbox(20, 210 + 40, barAnalyzerEffect, ' FX 6', 'barAnalyzer');
+
+
         const buttonGroupTypes = ['translate', 'scale', 'distort'];
 
         const createButtonGroup = (y, effect) => {
@@ -473,20 +527,31 @@
         const buttonGroupFx1 = createButtonGroup(10, tunnelEffect);
 
         function createButtonGroupScrollText(y, effect) {
-            const checkbox2 = new Checkbox(buttonsWidth + 20 + buttonsWidth + 20, y + 40, buttonsWidth, buttonsHeight, 'Insert', false);
-            checkbox2.onClick = () => {
+            const height = y + 40;
+            const insertCheckbox = new Checkbox(buttonsWidth + 40, height, buttonsWidth, buttonsHeight, 'Insert', false);
+            insertCheckbox.onClick = () => {
                 const text = prompt('Enter text');
                 scrollingTextEffect.text = text;
             };
-            //creiamo un bottone per ingrandire il testo
-            const checkbox3 = new Button(buttonsWidth + 20 + buttonsWidth + 20 + buttonsWidth, y + 40, buttonsWidth, buttonsHeight, 'Bigger', () => {
+
+            const biggerButton = new Button(buttonsWidth * 2 + 40, height, buttonsWidth, buttonsHeight, 'Bigger', () => {
                 scrollingTextEffect.fontSize += 10;
-            });
-            //creiamo un bottone per ridurre il testo
-            const checkbox4 = new Button(buttonsWidth + 40, y + 40, buttonsWidth, buttonsHeight, 'Smaller', () => {
+            }, 'blue');
+
+            const smallerButton = new Button(buttonsWidth * 3 + 40, height, buttonsWidth, buttonsHeight, 'Smaller', () => {
                 scrollingTextEffect.fontSize -= 10;
-            });
-            return [checkbox2, checkbox3, checkbox4];
+            }, 'red');
+
+            const fasterButton = new Button(buttonsWidth * 4 + 40, height, buttonsWidth, buttonsHeight, 'Faster', () => {
+                scrollingTextEffect.speed += 1;
+            }, 'green');
+
+            const slowerButton = new Button(buttonsWidth * 5 + 40, height, buttonsWidth, buttonsHeight, 'Slower', () => {
+                if (scrollingTextEffect.speed > 1) {
+                    scrollingTextEffect.speed -= 1;
+                }
+            }, 'orange');
+            return [insertCheckbox, biggerButton, smallerButton, fasterButton, slowerButton];
         }
 
         const buttonGroupScrollText = createButtonGroupScrollText(130, scrollingTextEffect);
@@ -511,6 +576,10 @@
             'FX 5': {
                 effect: imageEffect,
                 checkbox: checkbox5
+            },
+            'FX 6': {
+                effect: barAnalyzerEffect,
+                checkbox: checkbox6
             }
         };
 
@@ -531,13 +600,14 @@
         checkbox3.enabled = true;
         checkbox4.enabled = true;
         checkbox5.enabled = true;
+        checkbox6.enabled = true;
 
         // Add elements to the GUI
         const elementsToAdd = [
             scrollingTextEffect,    // Add scrolling text effect first to draw it below the buttons
-            checkbox1, checkbox2, checkbox3, checkbox4, checkbox5,
+            checkbox1, checkbox2, checkbox3, checkbox4, checkbox5, checkbox6,
             starRainEffect, tunnelEffect, madDancingShapesEffect, imageEffect,
-            ...buttonGroup, ...buttonGroupFx1, ...buttonGroupScrollText
+            ...buttonGroup, ...buttonGroupFx1, ...buttonGroupScrollText, barAnalyzerEffect
         ];
         elementsToAdd.forEach(element => gui.elements.push(element));
 
@@ -548,9 +618,26 @@
             currentBackground = currentBackground === backgrounds[0] ? backgrounds[1] : backgrounds[0];
             gui.background = currentBackground;
         });
-
+        audioControlButton.type = 'exlusive-controller';
         gui.elements.push(audioControlButton);
 
+        const disableControlsCheckbox = new Checkbox(40 + buttonsWidth, 10, buttonsWidth, buttonsHeight, 'FXs', false);
+        disableControlsCheckbox.type = 'exlusive-controller';
+        gui.elements.push(disableControlsCheckbox);
+
+        disableControlsCheckbox.onClick = () => {
+            enableFXs = !enableFXs;
+            disableControlsCheckbox.checked = !enableFXs;
+        };
+
+        const disableFXsCheckbox = new Checkbox(40 + buttonsWidth * 2, 10, buttonsWidth, buttonsHeight, 'Controls', false);
+        disableFXsCheckbox.type = 'exlusive-controller';
+        gui.elements.push(disableFXsCheckbox);
+
+        disableFXsCheckbox.onClick = () => {
+            enableControls = !enableControls;
+            disableFXsCheckbox.checked = !enableControls;
+        };
 
         function getMyOutputAnalyser() {
             const bass = calculateFrequency(dataArray, 20, 250);
@@ -576,19 +663,6 @@
             starRainEffect.numStars = myOutputAnalyser.treble * 10;
             analyser.getByteFrequencyData(dataArray);
 
-            const ctx = canvas.getContext('2d');
-            const barWidth = (canvas.width / bufferLength) * 10;
-            let x = 0;
-            for (let i = 0; i < bufferLength; i++) {
-                const barHeight = dataArray[i];
-                //fai le barre colorate di arcobaleno
-                //falle divertenti
-                ctx.fillStyle = `rgb(${barHeight},${myOutputAnalyser.mid},${myOutputAnalyser.treble})`;
-
-                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight / 2);
-                x += barWidth + 1;
-            }
-
             deltaTime = performance.now() - lastTime;
             lastTime = performance.now();
 
@@ -612,6 +686,7 @@
             updateAndDrawEffect(madDancingShapesEffect);
             updateAndDrawEffect(scrollingTextEffect);
             updateAndDrawEffect(imageEffect);
+            updateAndDrawEffect(barAnalyzerEffect);
 
             requestAnimationFrame(animate);
         }
